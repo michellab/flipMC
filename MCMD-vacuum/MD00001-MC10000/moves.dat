@@ -1,0 +1,6 @@
+WeightedMoves{
+  1 : weight == 1, timing = 0 ms
+       MolecularDynamics( OpenMMMDIntegrator(), timeStep() == 2 fs, nMoves() == 0 )
+  2 : weight == 10000, timing = 4.29165 ms
+       InternalMove( nAccepted() = 854 nRejected() == 9146 )
+}
