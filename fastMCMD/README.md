@@ -8,6 +8,7 @@ New implementation. The script MCMD2.py sequentially alternates between MD moves
 The number of MD or MC moves done in one cycle is controlled by 
 
 nmoves = Parameter("nmoves", 100, """Number of Molecular Dynamics moves to be performed per cycle.""")
+
 nmcmoves = Parameter("nmcmoves",0, """Number of Monte Carlo Internal moves to be performed per cycle.""")
 
 To disable MD and run MC only set nmoves to 0. 
