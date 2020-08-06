@@ -79,9 +79,9 @@ restart_file = Parameter("restart file", "sim_restart.s3",
 
 dcd_root = Parameter("dcd root", "traj", """Root of the filename of the output DCD trajectory files.""")
 
-nmoves = Parameter("nmoves", 100, """Number of Molecular Dynamics moves to be performed per cycle.""")
+nmoves = Parameter("nmoves", 0, """Number of Molecular Dynamics moves to be performed per cycle.""")
 
-nmcmoves = Parameter("nmcmoves",0, """Number of Monte Carlo Internal moves to be performed per cycle.""")
+nmcmoves = Parameter("nmcmoves",100, """Number of Monte Carlo Internal moves to be performed per cycle.""")
 
 random_seed = Parameter("random seed", None, """Random number seed. Set this if you
                          want to have reproducible simulations.""")
@@ -1260,10 +1260,20 @@ def run():
     s1 = timer.elapsed() / 1000.
     avg_nrg = 0.0
     count = 0
+    molNums = system.molNums()
     for i in range(cycle_start, cycle_end):
         print("\nCycle = ", i, flush=True )
         system = moves.move(system, nmoves.val, True)
-        system = MCmoves.move(system, nmcmoves.val, True)
+        system1 = MCmoves.move(system, nmcmoves.val, True)
+        # preserve velocities 
+        for molnum in molNums:
+            mol0 = system.molecule(molnum)[0].molecule()
+            mol1 = system1.molecule(molnum)[0].molecule()
+            if (not mol1.hasProperty("velocity") and mol0.hasProperty("velocity")):
+                vel0 = mol0.property("velocity")
+                mol1 = mol1.edit().setProperty("velocity", vel0).commit()
+                system1.update(mol1)
+        system = system1
         print("\npot. energy = ", system.energy(), flush=True)
         avg_nrg += system.energy().value()
         count += 1
