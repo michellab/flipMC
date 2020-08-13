@@ -61,6 +61,8 @@ rf_dielectric = Parameter("reaction field dielectric", 78.3,
 
 temperature = Parameter("temperature", 25 * celsius, """Simulation temperature""")
 
+MCtemperature = Parameter("MCtemperature", 25 * celsius, """Simulation temperature""")
+
 pressure = Parameter("pressure", 1 * atm, """Simulation pressure""")
 
 topfile = Parameter("topfile", "lig2.prm7",
@@ -79,9 +81,9 @@ restart_file = Parameter("restart file", "sim_restart.s3",
 
 dcd_root = Parameter("dcd root", "traj", """Root of the filename of the output DCD trajectory files.""")
 
-nmoves = Parameter("nmoves", 0, """Number of Molecular Dynamics moves to be performed per cycle.""")
+nmoves = Parameter("nmoves", 1000, """Number of Molecular Dynamics moves to be performed per cycle.""")
 
-nmcmoves = Parameter("nmcmoves",100, """Number of Monte Carlo Internal moves to be performed per cycle.""")
+nmcmoves = Parameter("nmcmoves", 10, """Number of Monte Carlo Internal moves to be performed per cycle.""")
 
 random_seed = Parameter("random seed", None, """Random number seed. Set this if you
                          want to have reproducible simulations.""")
@@ -104,7 +106,7 @@ minimal_coordinate_saving = Parameter("minimal coordinate saving", False, "Reduc
 
 time_to_skip = Parameter("time to skip", 0 * picosecond, """Time to skip in picoseconds""")
 
-minimise = Parameter("minimise", False, """Whether or not to perform minimization before the simulation.""")
+minimise = Parameter("minimise", True, """Whether or not to perform minimization before the simulation.""")
 
 minimise_tol = Parameter("minimise tolerance", 1, """Tolerance used to know when minimization is complete.""")
 
@@ -452,10 +454,16 @@ def setupMCmoves(system, random_seed):
     
     ligand_grp = MoleculeGroup("ligand",ligand)
     ligand_intra_moves = InternalMove( ligand_grp )
+
+    # make sure that the ligand is updated in the System
+    system.update(ligand)
+    # also make sure that the MoleculeGroup used by the sampler
+    # is also in the System
+    system.add(ligand_grp)
     
     moves = WeightedMoves()
     moves.add(ligand_intra_moves,1)
-    moves.setTemperature(temperature.val)
+    moves.setTemperature(MCtemperature.val)
 
     print("Create an internal MC move for the ligand")
     
@@ -1261,19 +1269,27 @@ def run():
     avg_nrg = 0.0
     count = 0
     molNums = system.molNums()
+    #PDB().write(system.molecules(),"begin.pdb")
+    #print (system.energy())
     for i in range(cycle_start, cycle_end):
         print("\nCycle = ", i, flush=True )
-        system = moves.move(system, nmoves.val, True)
-        system1 = MCmoves.move(system, nmcmoves.val, True)
+        #PDB().write(system.molecules(),"before.pdb")
+        #print (system.energy())
+        system = MCmoves.move(system, nmcmoves.val, True)
+        #PDB().write(system1.molecules(),"after.pdb")
+        #print (system1.energy())
+        #import pdb; pdb.set_trace()
+        #sys.exit(-1)
         # preserve velocities 
-        for molnum in molNums:
-            mol0 = system.molecule(molnum)[0].molecule()
-            mol1 = system1.molecule(molnum)[0].molecule()
-            if (not mol1.hasProperty("velocity") and mol0.hasProperty("velocity")):
-                vel0 = mol0.property("velocity")
-                mol1 = mol1.edit().setProperty("velocity", vel0).commit()
-                system1.update(mol1)
-        system = system1
+        #for molnum in molNums:
+        #    mol0 = system.molecule(molnum)[0].molecule()
+        #    mol1 = system1.molecule(molnum)[0].molecule()
+        #    if (not mol1.hasProperty("velocity") and mol0.hasProperty("velocity")):
+        #        vel0 = mol0.property("velocity")
+        #        mol1 = mol1.edit().setProperty("velocity", vel0).commit()
+        #        system1.update(mol1)
+        #system = system1
+        system = moves.move(system, nmoves.val, True)
         print("\npot. energy = ", system.energy(), flush=True)
         avg_nrg += system.energy().value()
         count += 1
